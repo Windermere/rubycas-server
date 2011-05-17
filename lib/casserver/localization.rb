@@ -56,7 +56,7 @@ module CASServer
       #       currently support anything like this.
 
       available = available_locales
-
+      puts "avail #{available.inspect}"
       if available.length == 1
         $LOG.warn "Only the #{available.first.inspect} localization is available. You should run `rake localization:mo` to compile support for additional languages!"
       elsif available.length == 0 # this should never actually happen
@@ -85,7 +85,9 @@ module CASServer
     end
 
     def available_locales
-      (Dir.glob(File.join(File.dirname(File.expand_path(__FILE__)), "../../locale/[a-z]*")).map{|path| File.basename(path)} << "en").uniq.collect{|l| l.gsub('_','-')}
+      #(Dir.glob(File.join(File.dirname(File.expand_path(__FILE__)), "../../locale/[a-z]*")).map{|path| File.basename(path)} << "en").uniq.collect{|l| l.gsub('_','-')}
+
+      Dir.glob(File.join(CASServer::Server.translations,"[a-z]*")).map{|path| File.basename(path)}.uniq.collect{|l| l.gsub('.yml','')}
     end
   end
 end

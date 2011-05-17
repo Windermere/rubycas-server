@@ -1,17 +1,18 @@
 require 'sinatra/base'
-require 'casserver/localization'
 require 'casserver/utils'
 require 'casserver/cas'
+require 'sinatra/r18n'
 
 require 'logger'
 $LOG ||= Logger.new(STDOUT)
 
 module CASServer
   class Server < Sinatra::Base
+    register Sinatra::R18n
+    
     CONFIG_FILE = ENV['CONFIG_FILE'] || "/etc/rubycas-server/config.yml"
     
     include CASServer::CAS # CAS protocol helpers
-    include Localization
 
     set :app_file, __FILE__
     set :public, Proc.new { settings.config[:public_dir] || File.join(root, "..", "..", "public") }
@@ -45,7 +46,7 @@ module CASServer
 
     def self.run!(options={})
       set options
-
+      puts options.inspect
       handler      = detect_rack_handler
       handler_name = handler.name.gsub(/.*::/, '')
       
@@ -266,16 +267,28 @@ module CASServer
       
       CASServer::Model::Base.establish_connection(config[:database])
     end
+    
+    def self.init_i18n!
+      set :default_locale, (config[:default_locale] || 'en')
+      
+      if config[:translations].nil?
+        print_cli_message "The translations directory hasn't been configured. Please double-check your config file (#{CONFIG_FILE.inspect}).", :error
+        exit 1
+      end
+      
+      set :translations, config[:translations]
+    end
 
     configure do
       load_config_file(CONFIG_FILE)
       init_logger!
       init_database!
       init_authenticators!
+      init_i18n!
     end
 
     before do
-      GetText.locale = determine_locale(request)
+      session[:locale] = params[:locale] if params[:locale]
       content_type :html, 'charset' => 'utf-8'
       @theme = settings.config[:theme]
       @organization = settings.config[:organization]
@@ -313,13 +326,11 @@ module CASServer
       end
 
       if tgt and !tgt_error
-        @message = {:type => 'notice',
-          :message => _("You are currently logged in as '%s'. If this is not you, please log in below.") % tgt.username }
+        @message = {:type => 'notice', :message => t.cas.login.already_loggedin( tgt.username) }
       end
 
       if params['redirection_loop_intercepted']
-        @message = {:type => 'mistake',
-          :message => _("The client and server are unable to negotiate authentication. Please try logging in again later.")}
+        @message = {:type => 'mistake', :message => t.cas.login.loop_error }
       end
 
       begin
@@ -336,12 +347,12 @@ module CASServer
         elsif @gateway
             $LOG.error("This is a gateway request but no service parameter was given!")
             @message = {:type => 'mistake',
-              :message => _("The server cannot fulfill this gateway request because no service parameter was given.")}
+              :message => t.cas.login.no_service_error}
         end
       rescue URI::InvalidURIError
         $LOG.error("The service '#{@service}' is not a valid URI!")
         @message = {:type => 'mistake',
-          :message => _("The target service your browser supplied appears to be invalid. Please contact your system administrator for help.")}
+          :message => t.cas.login.invalid_service}
       end
 
       lt = generate_login_ticket
@@ -370,7 +381,7 @@ module CASServer
           render :login_form
         else
           status 500
-          render _("Could not guess the CAS login URI. Please supply a submitToURI parameter with your request.")
+          render "Could not guess the CAS login URI. Please supply a submitToURI parameter with your request."
         end
       else
         render @template_engine, :login
@@ -451,7 +462,7 @@ module CASServer
 
           if @service.blank?
             $LOG.info("Successfully authenticated user '#{@username}' at '#{tgt.client_hostname}'. No service param was given, so we will not redirect.")
-            @message = {:type => 'confirmation', :message => _("You have successfully logged in.")}
+            @message = {:type => 'confirmation', :message => t.cas.login.success_msg}
           else
             @st = generate_service_ticket(@service, @username, tgt)
 
@@ -464,20 +475,20 @@ module CASServer
               $LOG.error("The service '#{@service}' is not a valid URI!")
               @message = {
                 :type => 'mistake',
-                :message => _("The target service your browser supplied appears to be invalid. Please contact your system administrator for help.")
+                :message => t.cas.login.invalid_service
               }
             end
           end
         else
           $LOG.warn("Invalid credentials given for user '#{@username}'")
-          @message = {:type => 'mistake', :message => _("Incorrect username or password.")}
+          @message = {:type => 'mistake', :message => t.cas.login.incorrect}
           status 401
         end
       rescue CASServer::AuthenticatorError => e
         $LOG.error(e)
         # generate another login ticket to allow for re-submitting the form
         @lt = generate_login_ticket.ticket
-        @message = {:type => 'mistake', :message => _(e.to_s)}
+        @message = {:type => 'mistake', :message => e.to_s}
         status 401
       end
 
@@ -536,9 +547,9 @@ module CASServer
         $LOG.warn("User tried to log out without a valid ticket-granting ticket.")
       end
 
-      @message = {:type => 'confirmation', :message => _("You have successfully logged out.")}
+      @message = {:type => 'confirmation', :message => t.cas.logout.success_msg}
 
-      @message[:message] +=_(" Please click on the following link to continue:") if @continue_url
+      @message[:message] += t.cas.logout.continue if @continue_url
 
       @lt = generate_login_ticket
 
