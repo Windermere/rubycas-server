@@ -315,6 +315,7 @@ module CASServer
       headers['Pragma'] = 'no-cache'
       headers['Cache-Control'] = 'no-store'
       headers['Expires'] = (Time.now - 1.year).rfc2822
+      headers['P3P'] = 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'
 
       # optional params
       @service = clean_service_url(params['service'])
@@ -391,6 +392,9 @@ module CASServer
     
     # 2.2
     post "#{uri_path}/login" do
+      headers['P3P'] = 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'
+      
+      
       Utils::log_controller_action(self.class, params)
       
       # 2.2.1 (optional)
@@ -506,6 +510,8 @@ module CASServer
     get "#{uri_path}/logout" do
       CASServer::Utils::log_controller_action(self.class, params)
 
+      headers['P3P'] = 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'
+      
       # The behaviour here is somewhat non-standard. Rather than showing just a blank
       # "logout" page, we take the user back to the login page with a "you have been logged out"
       # message, allowing for an opportunity to immediately log back in. This makes it
