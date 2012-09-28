@@ -149,7 +149,7 @@ module CASServer::CAS
       $LOG.debug error
     elsif tgt = TicketGrantingTicket.find_by_ticket(ticket)
       if settings.config[:maximum_session_lifetime] && Time.now - tgt.created_on > settings.config[:maximum_session_lifetime]
-	tgt.destroy
+	      tgt.destroy
         error = "Your session has expired. Please log in again."
         $LOG.info "Ticket granting ticket '#{ticket}' for user '#{tgt.username}' expired."
       else
