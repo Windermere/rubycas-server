@@ -20,7 +20,7 @@ module CASServer
     config = HashWithIndifferentAccess.new(
       :maximum_unused_login_ticket_lifetime => 5.minutes,
       :maximum_unused_service_ticket_lifetime => 5.minutes, # CAS Protocol Spec, sec. 3.2.1 (recommended expiry time)
-      :maximum_session_lifetime => 1.hours, #30.days, # all tickets are deleted after this period of time
+      :maximum_session_lifetime => 30.days, # all tickets are deleted after this period of time
       :log => {:file => 'casserver.log', :level => 'DEBUG'},
       :uri_path => ""
     )
