@@ -404,6 +404,7 @@ module CASServer
       @username = params['username']
       @password = params['password']
       @remember_me = params['remember_me']
+      @username_suffix = params['username_suffix']
       @lt = params['lt']
 
       # Remove leading and trailing widespace from username.
@@ -412,6 +413,10 @@ module CASServer
       if @username && settings.config[:downcase_username]
         $LOG.debug("Converting username #{@username.inspect} to lowercase because 'downcase_username' option is enabled.")
         @username.downcase!
+      end
+
+      if @username_suffix && @username_suffix.strip != "" && !(@username =~ /#{@username_suffix}$/)
+        @username = @username + @username_suffix
       end
 
       if error = validate_login_ticket(@lt)
