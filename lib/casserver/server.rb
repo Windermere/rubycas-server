@@ -338,12 +338,12 @@ module CASServer
         if @service
           if !@renew && tgt && !tgt_error
             st = generate_service_ticket(@service, tgt.username, tgt)
-            service_with_ticket = service_uri_with_ticket(params['service'], st)
+            service_with_ticket = service_uri_with_ticket(@service, st)
             $LOG.info("User '#{tgt.username}' authenticated based on ticket granting cookie. Redirecting to service '#{@service}'.")
             redirect service_with_ticket, 303 # response code 303 means "See Other" (see Appendix B in CAS Protocol spec)
           elsif @gateway
             $LOG.info("Redirecting unauthenticated gateway request to service '#{@service}'.")
-            redirect params['service'], 303
+            redirect @service, 303
           end
         elsif @gateway
             $LOG.error("This is a gateway request but no service parameter was given!")
@@ -476,7 +476,7 @@ module CASServer
             @st = generate_service_ticket(@service, @username, tgt)
 
             begin
-              service_with_ticket = service_uri_with_ticket(params['service'], @st)
+              service_with_ticket = service_uri_with_ticket(@service, @st)
 
               $LOG.info("Redirecting authenticated user '#{@username}' at '#{@st.client_hostname}' to service '#{@service}'")
               redirect service_with_ticket, 303 # response code 303 means "See Other" (see Appendix B in CAS Protocol spec)
