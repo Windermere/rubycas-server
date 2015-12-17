@@ -2,6 +2,7 @@ require 'sinatra/base'
 require 'casserver/utils'
 require 'casserver/cas'
 require 'sinatra/r18n'
+require 'yaml'
 
 require 'logger'
 $LOG ||= Logger.new(STDOUT)
@@ -735,7 +736,7 @@ module CASServer
 
     def serialize_extra_attribute(builder, key, value)
       builder.tag! key do
-        builder.cdata! value.to_yaml
+        builder.cdata! YAML.dump(value)
       end
     end
 
